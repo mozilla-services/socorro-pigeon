@@ -27,7 +27,9 @@ def handler(event, context):
     try:
         channel = connection.channel()
         channel.queue_declare(queue=queue)
-        basic_properties = pika.BasicProperties(delivery_mode=3) # makes messages permanent
+        # FIXME not sure if this is still needed
+        # makes messages permanent
+        # basic_properties = pika.BasicProperties(delivery_mode=3)
 
         for record in event['Records']:
             if record['eventName'] == 'ObjectCreated:Put':
@@ -43,7 +45,7 @@ def handler(event, context):
                         exchange='',
                         routing_key=queue,
                         body=crash_id,
-                        properties=basic_properties,
+                        # properties=basic_properties,
                     )
                 except Exception:
                     print('Error: amqp publish failed: ' + json.dumps(crash_id)
