@@ -2,3 +2,6 @@
 *.pyo
 *.swo
 *.swp
+/config.py
+/pika*
+/processor.zip
