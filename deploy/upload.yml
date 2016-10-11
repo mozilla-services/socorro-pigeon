@@ -6,10 +6,10 @@
   - name: Set Defaults
     set_fact:
       region: '{{ region | default("us-east-1") }}'
-      iam_role: '{{ iam_role | default("socorro_pidgeon") }}'
-      function_name: '{{ function_name | default("socorro_pidgeon") }}'
+      iam_role: '{{ iam_role | default("socorro_pigeon") }}'
+      function_name: '{{ function_name | default("socorro_pigeon") }}'
       description: '{{ description | default("queue socorro crash ids when uploaded to s3") }}'
-      handler: '{{ handler | default("pidgeon.handler") }}'
+      handler: '{{ handler | default("pigeon.handler") }}'
       memory_size: '{{ memory_size | default(128) }}'
       timeout: '{{ timeout | default(300) }}'
       amqp_host: '{{ amqp_host | default("localhost") }}'
@@ -29,32 +29,32 @@
         virtual_host = '{{ amqp_virtual_host }}'
       dest: ./config.py
     register: config
-  - name: Inspect pidgeon.py
+  - name: Inspect pigeon.py
     stat:
-      path: pidgeon.py
-    register: pidgeon
+      path: pigeon.py
+    register: pigeon
   - name: Inspect pika module
     stat:
       path: pika
     register: pika
-  - name: Inspect pidgeon.zip
+  - name: Inspect pigeon.zip
     stat:
-      path: pidgeon.zip
+      path: pigeon.zip
     register: zip
   - name: Install Requirements
     command: pip install pika -t .
     when: pika.stat.islnk is not defined # directory doesn't exist
   - name: Create Zip File
-    shell: zip -r pidgeon.zip pidgeon.py config.py pika
+    shell: zip -r pigeon.zip pigeon.py config.py pika
     when: >
       (zip.stat.islnk is not defined)
       or (config | changed)
-      or (pidgeon.stat.mtime > zip.stat.mtime)
+      or (pigeon.stat.mtime > zip.stat.mtime)
       or (pika.stat.islnk is not defined)
       or (pika.stat.mtime > zip.stat.mtime)
     # zip doesn't exit
     # config changed
-    # pidgeon is newer than zip
+    # pigeon is newer than zip
     # pika module didn't exist
     # pike module is newer than zip
   - name: Create IAM Role
@@ -87,7 +87,7 @@
       role: '{{ role.output }}'
       runtime: 'python2.7'
       timeout: '{{ timeout }}'
-      zip_file: 'pidgeon.zip'
+      zip_file: 'pigeon.zip'
     register: lambda
     until: lambda|success
     retries: 12 # 3 minutes
