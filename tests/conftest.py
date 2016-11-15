@@ -6,8 +6,8 @@ import imp
 import parser
 import os
 import sys
+import uuid
 
-from lambda_local import context
 import pytest
 
 
@@ -52,6 +52,32 @@ def crash_id_to_path(crash_id):
     )
 
 
+class LambdaContext:
+    """Context class that mimics the AWS Lambda context
+
+    http://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html
+
+    """
+    def __init__(self):
+        self.aws_request_id = uuid.uuid4().hex
+
+        self.log_group_name = '/aws/lambda/test'
+        self.log_stream_name = '2016-11-15blahblah'
+
+        self.function_name = 'test'
+        self.memory_limit_in_mb = '384'
+        self.function_version = '1'
+        self.invoked_function_arn = 'arn:aws:lambda:us-west-2:blahblah:function:test'
+
+        # FIXME(willkg): Keeping these as None until we need them.
+        self.client_context = None
+        self.identity = None
+
+    def get_remaining_time_in_millis(self):
+        # FIXME(willkg): Implement this when we need it
+        return 5000
+
+
 class PigeonClient:
     """Class for pigeon in the AWS lambda environment"""
     def build_crash_save_events(self, crash_ids):
@@ -72,12 +98,7 @@ class PigeonClient:
         }
 
     def run(self, events):
-        ctx = context.Context(
-            timeout=3,
-            arn_string='',
-            version_name=''
-        )
-        result = handler(events, ctx.activate())
+        result = handler(events, LambdaContext())
         return result
 
 
