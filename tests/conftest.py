@@ -14,12 +14,14 @@ import pytest
 CONFIG_MODULE = """
 import os
 
+# These have to match the rabbitmq container
+user = os.environ['RABBITMQ_DEFAULT_USER']
+password = os.environ['RABBITMQ_DEFAULT_PASS']
+virtual_host = os.environ['RABBITMQ_DEFAULT_VHOST']
+
 host = os.environ['RABBITMQ_HOST']
-port = int(os.environ['RABBITMQ_PORT'])
-user = os.environ['RABBITMQ_USER']
-password = os.environ['RABBITMQ_PASS']
-virtual_host = os.environ['RABBITMQ_VHOST']
-queue = os.environ['RABBITMQ_QUEUE']
+port = 5672
+queue = 'antennadev.normal'
 """
 
 

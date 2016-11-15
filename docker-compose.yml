@@ -8,13 +8,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=rabbituser
-      - RABBITMQ_PASS=rabbitpwd
-      - RABBITMQ_VHOST=rabbitvhost
-      - RABBITMQ_QUEUE=antennadev.normal
+    env_file: docker.env
     volumes:
       - .:/app
     links:
@@ -25,7 +19,4 @@ services:
     # FIXME: pin this to the version of rabbitmq we're using in -stage
     # and -prod
     image: rabbitmq
-    environment:
-      - RABBITMQ_DEFAULT_USER=rabbituser
-      - RABBITMQ_DEFAULT_PASS=rabbitpwd
-      - RABBITMQ_DEFAULT_VHOST=rabbitvhost
+    env_file: docker.env
