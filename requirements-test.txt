@@ -1,0 +1,12 @@
+# Runtime requirements
+pika==0.10.0 \
+    --hash=sha256:63131aaeec48a6c8f1db1fe657e1e74cf384c3927eb7d1725e31edae4220dea4 \
+    --hash=sha256:7277b4d12a99efa4058782614d84138983f9f89d690bdfcea66290d810806459
+
+# Test requirements
+pytest==3.0.4 \
+    --hash=sha256:f043cb1eaafc9a10c9de77a7d57ba9ccb1d919edb45926b83c29e2482a41101e \
+    --hash=sha256:879fee2c1fdbaacd1bf2c0047677c6dd4aee05b9c1e64330b34d130a584fa40d
+py==1.4.31 \
+    --hash=sha256:4a3e4f3000c123835ac39cab5ccc510642153bc47bc1f13e2bbb53039540ae69 \
+    --hash=sha256:a6501963c725fc2554dabfece8ae9a8fb5e149c0ac0a42fd2b02c5c1c57fc114

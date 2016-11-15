@@ -5,3 +5,4 @@
 /config.py
 /pika*
 /pigeon.zip
+.docker-build

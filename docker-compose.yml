@@ -1,0 +1,22 @@
+# docker-compose for socorro-collector that imitates the Mozilla
+# Socorro prod environment.
+#
+# Note: Requires docker 1.10.0+ and docker-compose 1.6.0+.
+version: "2"
+services:
+  lambda:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: docker.env
+    volumes:
+      - .:/app
+    links:
+      - rabbitmq
+
+  rabbitmq:
+    # https://hub.docker.com/_/rabbitmq/
+    # FIXME: pin this to the version of rabbitmq we're using in -stage
+    # and -prod
+    image: rabbitmq
+    env_file: docker.env

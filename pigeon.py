@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import json
 import pika
 
@@ -17,6 +21,9 @@ def handler(event, context):
             host=host,
             port=port,
             virtual_host=virtual_host,
+            connection_attempts=10,
+            socket_timeout=10,
+            retry_delay=1,
             credentials=pika.credentials.PlainCredentials(
                 user,
                 password,
@@ -36,9 +43,9 @@ def handler(event, context):
                 try:
                     key = record['s3']['object']['key']
                     crash_id = key.rsplit('/', 1)[-1]
-                except Exception:
-                    print('Error: invalid record: ' + json.dumps(record)
-                    print(msg)
+                except Exception as exc:
+                    print('Error: invalid record: ' + json.dumps(record))
+                    print(exc)
                     raise
                 try:
                     channel.basic_publish(
@@ -48,6 +55,6 @@ def handler(event, context):
                         # properties=basic_properties,
                     )
                 except Exception:
-                    print('Error: amqp publish failed: ' + json.dumps(crash_id)
+                    print('Error: amqp publish failed: ' + json.dumps(crash_id))
     finally:
         connection.close()
