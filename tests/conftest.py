@@ -43,7 +43,7 @@ sys.modules['config'] = build_config_module()
 # Insert the repository root into sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from pigeon import handler  # noqa
+from pigeon import handler, build_pika_connection  # noqa
 
 
 class LambdaContext:
@@ -111,3 +111,34 @@ class PigeonClient:
 def client():
     """Returns an AWS Lambda mock that runs pigeon thing"""
     return PigeonClient()
+
+
+class RabbitMQHelper:
+    def __init__(self, config):
+        self.config = config
+        self.conn = build_pika_connection(
+            config.host, config.port, config.virtual_host, config.user, config.password
+        )
+
+    def clear_channel(self):
+        channel = self.conn.channel()
+        channel.queue_declare(queue=self.config.queue)
+        channel.basic_ack(0, True)
+
+    def next_item(self):
+        channel = self.conn.channel()
+        channel.queue_declare(queue=self.config.queue)
+        method_frame, header_frame, body = channel.basic_get(queue=self.config.queue)
+        if method_frame:
+            channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+            return body
+        return None
+
+
+@pytest.fixture
+def rabbitmq_helper():
+    """Returns a RabbitMQ helper instance"""
+    import config
+    helper = RabbitMQHelper(config)
+    helper.clear_channel()
+    return helper

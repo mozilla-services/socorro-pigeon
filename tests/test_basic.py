@@ -7,12 +7,16 @@ import pytest
 from pigeon import extract_crash_id
 
 
-def test_basic(client):
-    events = client.build_crash_save_events(client.crash_id_to_path('de1bb258-cbbf-4589-a673-34f800160918'))
+def test_basic(client, rabbitmq_helper):
+    crash_id = 'de1bb258-cbbf-4589-a673-34f800160918'
+    events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
     assert client.run(events) is None
 
+    item = rabbitmq_helper.next_item()
+    assert item == crash_id
 
-def test_non_s3_event(client):
+
+def test_non_s3_event(client, rabbitmq_helper):
     events = {
         'Records': [
             {
@@ -21,10 +25,13 @@ def test_non_s3_event(client):
         ]
     }
     assert client.run(events) is None
-    # FIXME: verify no rabbit message got created
+
+    # Verify that no rabbit message got created
+    item = rabbitmq_helper.next_item()
+    assert item is None
 
 
-def test_non_put_event(client):
+def test_non_put_event(client, rabbitmq_helper):
     events = {
         'Records': [
             {
@@ -33,7 +40,10 @@ def test_non_put_event(client):
         ]
     }
     assert client.run(events) is None
-    # FIXME: verify no rabbit message got created
+
+    # Verify that no rabbit message got created
+    item = rabbitmq_helper.next_item()
+    assert item is None
 
 
 @pytest.mark.parametrize('data, expected', [

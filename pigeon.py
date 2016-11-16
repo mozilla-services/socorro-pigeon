@@ -5,14 +5,27 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import json
+import socket
+
 import pika
 
-from config import host
-from config import password
-from config import port
-from config import queue
-from config import user
-from config import virtual_host
+from config import (
+    host,
+    password,
+    port,
+    queue,
+    user,
+    virtual_host,
+)
+
+
+PIKA_EXCEPTIONS = (
+    pika.exceptions.AMQPConnectionError,
+    pika.exceptions.ChannelClosed,
+    pika.exceptions.ConnectionClosed,
+    pika.exceptions.NoFreeChannels,
+    socket.timeout
+)
 
 
 def is_crash_id(crash_id):
@@ -52,8 +65,8 @@ def extract_crash_id(record):
         return None
 
 
-def handler(event, context):
-    connection = pika.BlockingConnection(
+def build_pika_connection(host, port, virtual_host, user, password):
+    return pika.BlockingConnection(
         pika.ConnectionParameters(
             host=host,
             port=port,
@@ -63,17 +76,19 @@ def handler(event, context):
             retry_delay=1,
             credentials=pika.credentials.PlainCredentials(
                 user,
-                password,
+                password
             )
         )
     )
 
+
+def handler(event, context):
+    connection = None
     try:
+        connection = build_pika_connection(host, port, virtual_host, user, password)
+
         channel = connection.channel()
         channel.queue_declare(queue=queue)
-        # FIXME not sure if this is still needed
-        # makes messages permanent
-        # basic_properties = pika.BasicProperties(delivery_mode=3)
 
         for record in event['Records']:
             # Skip anything that's not an S3 ObjectCreated:put event.
@@ -85,15 +100,19 @@ def handler(event, context):
             if crash_id is None:
                 continue
 
-            try:
-                channel.basic_publish(
-                    exchange='',
-                    routing_key=queue,
-                    body=crash_id,
-                    # properties=basic_properties,
-                )
-            except Exception:
-                print('Error: amqp publish failed: ' + json.dumps(crash_id))
+            props = pika.BasicProperties(delivery_mode=2)
+            channel.basic_publish(
+                exchange='',
+                routing_key=queue,
+                body=crash_id,
+                properties=props
+            )
+
+    except PIKA_EXCEPTIONS as pika_exc:
+        # We've told the pika connection to retry a bunch, so if we hit this,
+        # then evil is a foot and there isn't much we can do about it.
+        print('Error: amqp publish failed: %s %s' % (crash_id, pika_exc))
 
     finally:
-        connection.close()
+        if connection is not None:
+            connection.close()
