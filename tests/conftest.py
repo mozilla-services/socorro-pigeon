@@ -46,14 +46,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from pigeon import handler  # noqa
 
 
-def crash_id_to_path(crash_id):
-    return '/v2/raw_crash/{entropy}/{date}/{crashid}'.format(
-        entropy=crash_id[0:3],
-        date='20' + crash_id[-6:],
-        crashid=crash_id
-    )
-
-
 class LambdaContext:
     """Context class that mimics the AWS Lambda context
 
@@ -82,20 +74,31 @@ class LambdaContext:
 
 class PigeonClient:
     """Class for pigeon in the AWS lambda environment"""
-    def build_crash_save_events(self, crash_ids):
+    def crash_id_to_path(self, crash_id):
+        return '/v2/raw_crash/{entropy}/{date}/{crashid}'.format(
+            entropy=crash_id[0:3],
+            date='20' + crash_id[-6:],
+            crashid=crash_id
+        )
+
+    def build_crash_save_events(self, keys):
+        if isinstance(keys, str):
+            keys = [keys]
+
         # FIXME(willkg): This only generates a record that has the stuff that
         # pigeon is looking for. It's not a full record.
         return {
             'Records': [
                 {
+                    'eventSource': 'aws:s3',
                     'eventName': 'ObjectCreated:Put',
                     's3': {
                         'object': {
-                            'key': crash_id_to_path(crash_id)
+                            'key': key
                         }
                     }
                 }
-                for crash_id in crash_ids
+                for key in keys
             ]
         }
 
