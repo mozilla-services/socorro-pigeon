@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import json
+import logging
 import socket
 
 import pika
@@ -26,6 +26,10 @@ PIKA_EXCEPTIONS = (
     pika.exceptions.NoFreeChannels,
     socket.timeout
 )
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def is_crash_id(crash_id):
@@ -97,6 +101,7 @@ def handler(event, context):
 
             # Extract crash id--if it's not a raw_crash object, skip it.
             crash_id = extract_crash_id(record)
+            logger.info('crash id: %s', crash_id)
             if crash_id is None:
                 continue
 
@@ -108,10 +113,10 @@ def handler(event, context):
                 properties=props
             )
 
-    except PIKA_EXCEPTIONS as pika_exc:
+    except PIKA_EXCEPTIONS:
         # We've told the pika connection to retry a bunch, so if we hit this,
         # then evil is a foot and there isn't much we can do about it.
-        print('Error: amqp publish failed: %s %s' % (crash_id, pika_exc))
+        logger.exception('Error: amqp publish failed: %s', crash_id)
 
     finally:
         if connection is not None:
