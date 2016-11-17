@@ -46,6 +46,16 @@ def test_non_put_event(client, rabbitmq_helper):
     assert item is None
 
 
+def test_defer(client, rabbitmq_helper):
+    crash_id = 'de1bb258-cbbf-4589-a673-34f801160918'
+    #                                        ^ defer
+    events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
+    assert client.run(events) is None
+
+    item = rabbitmq_helper.next_item()
+    assert item is None
+
+
 @pytest.mark.parametrize('data, expected', [
     # Raw crash file
     ('/v2/raw_crash/de1/20160918/de1bb258-cbbf-4589-a673-34f800160918', 'de1bb258-cbbf-4589-a673-34f800160918'),
