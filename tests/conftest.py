@@ -43,15 +43,7 @@ sys.modules['config'] = build_config_module()
 # Insert the repository root into sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from pigeon import handler  # noqa
-
-
-def crash_id_to_path(crash_id):
-    return '/v2/raw_crash/{entropy}/{date}/{crashid}'.format(
-        entropy=crash_id[0:3],
-        date='20' + crash_id[-6:],
-        crashid=crash_id
-    )
+from pigeon import handler, build_pika_connection  # noqa
 
 
 class LambdaContext:
@@ -82,20 +74,31 @@ class LambdaContext:
 
 class PigeonClient:
     """Class for pigeon in the AWS lambda environment"""
-    def build_crash_save_events(self, crash_ids):
+    def crash_id_to_path(self, crash_id):
+        return '/v2/raw_crash/{entropy}/{date}/{crashid}'.format(
+            entropy=crash_id[0:3],
+            date='20' + crash_id[-6:],
+            crashid=crash_id
+        )
+
+    def build_crash_save_events(self, keys):
+        if isinstance(keys, str):
+            keys = [keys]
+
         # FIXME(willkg): This only generates a record that has the stuff that
         # pigeon is looking for. It's not a full record.
         return {
             'Records': [
                 {
+                    'eventSource': 'aws:s3',
                     'eventName': 'ObjectCreated:Put',
                     's3': {
                         'object': {
-                            'key': crash_id_to_path(crash_id)
+                            'key': key
                         }
                     }
                 }
-                for crash_id in crash_ids
+                for key in keys
             ]
         }
 
@@ -108,3 +111,34 @@ class PigeonClient:
 def client():
     """Returns an AWS Lambda mock that runs pigeon thing"""
     return PigeonClient()
+
+
+class RabbitMQHelper:
+    def __init__(self, config):
+        self.config = config
+        self.conn = build_pika_connection(
+            config.host, config.port, config.virtual_host, config.user, config.password
+        )
+
+    def clear_channel(self):
+        channel = self.conn.channel()
+        channel.queue_declare(queue=self.config.queue)
+        channel.basic_ack(0, True)
+
+    def next_item(self):
+        channel = self.conn.channel()
+        channel.queue_declare(queue=self.config.queue)
+        method_frame, header_frame, body = channel.basic_get(queue=self.config.queue)
+        if method_frame:
+            channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+            return body
+        return None
+
+
+@pytest.fixture
+def rabbitmq_helper():
+    """Returns a RabbitMQ helper instance"""
+    import config
+    helper = RabbitMQHelper(config)
+    helper.clear_channel()
+    return helper
