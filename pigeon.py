@@ -27,6 +27,9 @@ PIKA_EXCEPTIONS = (
     socket.timeout
 )
 
+# These values match Antenna throttling return values
+ACCEPT = '0'
+DEFER = '1'
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -44,8 +47,8 @@ def is_crash_id(crash_id):
         # Verify length of the string
         len(crash_id) == 36 and
 
-        # The 7-to-last character is either a 0 (ACCEPT) or a 1 (DEFER)
-        crash_id[-7] in ('0', '1')
+        # The 7-to-last character is a throttle result
+        crash_id[-7] in (ACCEPT, DEFER)
     )
 
 
@@ -67,6 +70,10 @@ def extract_crash_id(record):
         return crash_id
     except (KeyError, IndexError):
         return None
+
+
+def get_throttle_result(crash_id):
+    return crash_id[-7]
 
 
 def build_pika_connection(host, port, virtual_host, user, password):
@@ -103,6 +110,10 @@ def handler(event, context):
             crash_id = extract_crash_id(record)
             logger.info('crash id: %s', crash_id)
             if crash_id is None:
+                continue
+
+            # Skip crashes that aren't marked for processing
+            if get_throttle_result(crash_id) == DEFER:
                 continue
 
             props = pika.BasicProperties(delivery_mode=2)
