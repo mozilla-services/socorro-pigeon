@@ -6,6 +6,7 @@
 
 import logging
 import socket
+import time
 
 import pika
 
@@ -33,6 +34,15 @@ DEFER = '1'
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+
+def statsd_incr(key, val=1):
+    """Sends a specially formatted line for datadog to pick up for statsd incr"""
+    print('MONITORING|%(timestamp)s|%(val)s|count|%(key)s|' % {
+        'timestamp': int(time.time()),
+        'key': key,
+        'val': val
+    })
 
 
 def is_crash_id(crash_id):
@@ -95,28 +105,40 @@ def build_pika_connection(host, port, virtual_host, user, password):
 
 def handler(event, context):
     connection = None
+
+    accepted_records = []
+
+    for record in event['Records']:
+        # Skip anything that's not an S3 ObjectCreated:put event.
+        if record['eventSource'] != 'aws:s3' or record['eventName'] != 'ObjectCreated:Put':
+            continue
+
+        # Extract crash id--if it's not a raw_crash object, skip it.
+        crash_id = extract_crash_id(record)
+        logger.info('crash id: %s', crash_id)
+        if crash_id is None:
+            continue
+
+        # Skip crashes that aren't marked for processing
+        if get_throttle_result(crash_id) == DEFER:
+            statsd_incr('antenna.pigeon.defer', 1)
+            continue
+
+        accepted_records.append(crash_id)
+
+    if not accepted_records:
+        return
+
     try:
         connection = build_pika_connection(host, port, virtual_host, user, password)
+        props = pika.BasicProperties(delivery_mode=2)
 
         channel = connection.channel()
         channel.queue_declare(queue=queue)
 
-        for record in event['Records']:
-            # Skip anything that's not an S3 ObjectCreated:put event.
-            if record['eventSource'] != 'aws:s3' or record['eventName'] != 'ObjectCreated:Put':
-                continue
+        for crash_id in accepted_records:
+            statsd_incr('antenna.pigeon.accept', 1)
 
-            # Extract crash id--if it's not a raw_crash object, skip it.
-            crash_id = extract_crash_id(record)
-            logger.info('crash id: %s', crash_id)
-            if crash_id is None:
-                continue
-
-            # Skip crashes that aren't marked for processing
-            if get_throttle_result(crash_id) == DEFER:
-                continue
-
-            props = pika.BasicProperties(delivery_mode=2)
             channel.basic_publish(
                 exchange='',
                 routing_key=queue,
@@ -127,6 +149,7 @@ def handler(event, context):
     except PIKA_EXCEPTIONS:
         # We've told the pika connection to retry a bunch, so if we hit this,
         # then evil is a foot and there isn't much we can do about it.
+        statsd_incr('antenna.pigeon.pika_error', 1)
         logger.exception('Error: amqp publish failed: %s', crash_id)
 
     finally:
