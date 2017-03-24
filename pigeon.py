@@ -4,11 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from base64 import b64decode
 import logging
 import os
 import socket
 import time
 
+import boto3
 import pika
 
 
@@ -30,6 +32,20 @@ logger.setLevel(logging.INFO)
 
 def get_from_env(key):
     return os.environ['PIGEON_%s' % key]
+
+
+def decrypt(key):
+    return boto3.client('kms').decrypt(CiphertextBlob=b64decode(os.environ[key]))['Plaintext']
+
+
+CONFIG = {
+    'host': get_from_env('HOST'),
+    'port': int(get_from_env('PORT')),
+    'user': get_from_env('USER'),
+    'password': get_from_env('PASSWORD'),
+    'virtual_host': get_from_env('VIRTUAL_HOST'),
+    'queue': get_from_env('QUEUE'),
+}
 
 
 def statsd_incr(key, val=1):
@@ -68,13 +84,15 @@ def extract_crash_id(record):
     """
     try:
         key = record['s3']['object']['key']
+        logging.debug('extracting crash id from %s', repr(key))
         if not key.startswith('v2/raw_crash/'):
             return None
         crash_id = key.rsplit('/', 1)[-1]
         if not is_crash_id(crash_id):
             return None
         return crash_id
-    except (KeyError, IndexError):
+    except (KeyError, IndexError) as exc:
+        logging.debug('Exception thrown when extracting crashid: %s', exc)
         return None
 
 
@@ -127,23 +145,23 @@ def handler(event, context):
 
     try:
         connection = build_pika_connection(
-            host=get_from_env('HOST'),
-            port=int(get_from_env('PORT')),
-            virtual_host=get_from_env('VIRTUAL_HOST'),
-            user=get_from_env('USER'),
-            password=get_from_env('PASSWORD')
+            host=CONFIG['host'],
+            port=CONFIG['port'],
+            virtual_host=CONFIG['virtual_host'],
+            user=CONFIG['user'],
+            password=CONFIG['password'],
         )
         props = pika.BasicProperties(delivery_mode=2)
 
         channel = connection.channel()
-        channel.queue_declare(queue=get_from_env('QUEUE'))
+        channel.queue_declare(queue=CONFIG['queue'])
 
         for crash_id in accepted_records:
             statsd_incr('socorro.pigeon.accept', 1)
 
             channel.basic_publish(
                 exchange='',
-                routing_key=get_from_env('QUEUE'),
+                routing_key=CONFIG['queue'],
                 body=crash_id,
                 properties=props
             )
