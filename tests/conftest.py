@@ -54,7 +54,7 @@ class LambdaContext:
 class PigeonClient:
     """Class for pigeon in the AWS lambda environment"""
     def crash_id_to_path(self, crash_id):
-        return '/v2/raw_crash/{entropy}/{date}/{crashid}'.format(
+        return 'v2/raw_crash/{entropy}/{date}/{crashid}'.format(
             entropy=crash_id[0:3],
             date='20' + crash_id[-6:],
             crashid=crash_id
