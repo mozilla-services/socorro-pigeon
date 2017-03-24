@@ -74,15 +74,15 @@ def test_accept(client, rabbitmq_helper, capsys):
 
 @pytest.mark.parametrize('data, expected', [
     # Raw crash file
-    ('/v2/raw_crash/de1/20160918/de1bb258-cbbf-4589-a673-34f800160918', 'de1bb258-cbbf-4589-a673-34f800160918'),
+    ('v2/raw_crash/de1/20160918/de1bb258-cbbf-4589-a673-34f800160918', 'de1bb258-cbbf-4589-a673-34f800160918'),
 
     # Other files that get saved in the same bucket
-    ('/v1/dump_names/de1bb258-cbbf-4589-a673-34f800160918', None),
-    ('/v1/upload_file_minidump/de1bb258-cbbf-4589-a673-34f800160918', None),
+    ('v1/dump_names/de1bb258-cbbf-4589-a673-34f800160918', None),
+    ('v1/upload_file_minidump/de1bb258-cbbf-4589-a673-34f800160918', None),
 
     # Test-like files we might have pushed places to make sure things are working
-    ('/v2/raw_crash/de1/20160918/test', None),
-    ('/foo/bar/test', None),
+    ('v2/raw_crash/de1/20160918/test', None),
+    ('foo/bar/test', None),
 ])
 def test_extract_crash_id(data, expected, client):
     record = client.build_crash_save_events(data)['Records'][0]

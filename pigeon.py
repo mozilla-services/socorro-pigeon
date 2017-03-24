@@ -68,7 +68,7 @@ def extract_crash_id(record):
     """
     try:
         key = record['s3']['object']['key']
-        if not key.startswith('/v2/raw_crash/'):
+        if not key.startswith('v2/raw_crash/'):
             return None
         crash_id = key.rsplit('/', 1)[-1]
         if not is_crash_id(crash_id):
