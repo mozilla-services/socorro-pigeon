@@ -43,3 +43,31 @@ Quickstart
 
 
    This lets you change arguments and run specific tests.
+
+
+Configuration
+=============
+
+All configuration for Pigeon relates to the RabbitMQ service it needs to connect
+to.
+
+``PIGEON_HOST``
+    The RabbitMQ host.
+
+``PIGEON_PORT``
+    The RabbitMQ host port.
+
+``PIGEON_VIRTUAL_HOST``
+    The RabbitMQ virtual host.
+
+``PIGEON_USER``
+    The RabbitMQ user.
+
+``PIGEON_PASSWORD``
+    The RabbitMQ user password.
+
+``PIGEON_QUEUE``
+    The RabbitMQ queue to use.
+
+
+If any of these are missing from the environment, Pigeon will raise a ``KeyError``.

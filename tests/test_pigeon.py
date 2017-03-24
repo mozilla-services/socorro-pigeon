@@ -56,7 +56,7 @@ def test_defer(client, rabbitmq_helper, capsys):
     assert item is None
 
     stdout, stderr = capsys.readouterr()
-    assert '|1|count|antenna.pigeon.defer|' in stdout
+    assert '|1|count|socorro.pigeon.defer|' in stdout
 
 
 def test_accept(client, rabbitmq_helper, capsys):
@@ -69,7 +69,7 @@ def test_accept(client, rabbitmq_helper, capsys):
     assert item == crash_id
 
     stdout, stderr = capsys.readouterr()
-    assert '|1|count|antenna.pigeon.accept|' in stdout
+    assert '|1|count|socorro.pigeon.accept|' in stdout
 
 
 @pytest.mark.parametrize('data, expected', [

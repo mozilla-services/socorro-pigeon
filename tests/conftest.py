@@ -2,8 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import imp
-import parser
 import os
 import sys
 import uuid
@@ -11,39 +9,20 @@ import uuid
 import pytest
 
 
-CONFIG_MODULE = """
-import os
-
-# These have to match the rabbitmq container
-user = os.environ['RABBITMQ_DEFAULT_USER']
-password = os.environ['RABBITMQ_DEFAULT_PASS']
-virtual_host = os.environ['RABBITMQ_DEFAULT_VHOST']
-
-host = os.environ['RABBITMQ_HOST']
-port = 5672
-queue = 'antennadev.normal'
-"""
+# Insert parent directory in sys.path so we can import pigeon
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 
-def build_config_module():
-    """Generate a config module and insert it
+# Insert test env variables
+os.environ['PIGEON_USER'] = os.environ['RABBITMQ_DEFAULT_USER']
+os.environ['PIGEON_PASSWORD'] = os.environ['RABBITMQ_DEFAULT_PASS']
+os.environ['PIGEON_VIRTUAL_HOST'] = os.environ['RABBITMQ_DEFAULT_VHOST']
+os.environ['PIGEON_HOST'] = os.environ['RABBITMQ_HOST']
+os.environ['PIGEON_PORT'] = '5672'
+os.environ['PIGEON_QUEUE'] = 'socorrodev.normal'
 
-    pigeon requires a config.py file which has the configuration in it. We need
-    one for tests, but that's kind of irritating. So we fake a module and stick
-    it in sys.modules.
-    """
-    st = parser.suite(CONFIG_MODULE)
-    code = st.compile('config.py')
-    cfg = imp.new_module('config')
-    exec(code, cfg.__dict__)
-    return cfg
 
-sys.modules['config'] = build_config_module()
-
-# Insert the repository root into sys.path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-from pigeon import handler, build_pika_connection  # noqa
+from pigeon import get_from_env, build_pika_connection, handler  # noqa
 
 
 class LambdaContext:
@@ -114,21 +93,19 @@ def client():
 
 
 class RabbitMQHelper:
-    def __init__(self, config):
-        self.config = config
-        self.conn = build_pika_connection(
-            config.host, config.port, config.virtual_host, config.user, config.password
-        )
+    def __init__(self, user, password, vhost, host, port, queue):
+        self.queue = queue
+        self.conn = build_pika_connection(host, port, vhost, user, password)
 
     def clear_channel(self):
         channel = self.conn.channel()
-        channel.queue_declare(queue=self.config.queue)
+        channel.queue_declare(queue=self.queue)
         channel.basic_ack(0, True)
 
     def next_item(self):
         channel = self.conn.channel()
-        channel.queue_declare(queue=self.config.queue)
-        method_frame, header_frame, body = channel.basic_get(queue=self.config.queue)
+        channel.queue_declare(queue=self.queue)
+        method_frame, header_frame, body = channel.basic_get(queue=self.queue)
         if method_frame:
             channel.basic_ack(delivery_tag=method_frame.delivery_tag)
             return body
@@ -138,7 +115,13 @@ class RabbitMQHelper:
 @pytest.fixture
 def rabbitmq_helper():
     """Returns a RabbitMQ helper instance"""
-    import config
-    helper = RabbitMQHelper(config)
+    helper = RabbitMQHelper(
+        get_from_env('USER'),
+        get_from_env('PASSWORD'),
+        get_from_env('VIRTUAL_HOST'),
+        get_from_env('HOST'),
+        int(get_from_env('PORT')),
+        get_from_env('QUEUE')
+    )
     helper.clear_channel()
     return helper
