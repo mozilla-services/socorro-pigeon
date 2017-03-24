@@ -5,19 +5,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import logging
+import os
 import socket
 import time
 
 import pika
-
-from config import (
-    host,
-    password,
-    port,
-    queue,
-    user,
-    virtual_host,
-)
 
 
 PIKA_EXCEPTIONS = (
@@ -34,6 +26,10 @@ DEFER = '1'
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+
+def get_from_env(key):
+    return os.environ['PIGEON_%s' % key]
 
 
 def statsd_incr(key, val=1):
@@ -121,7 +117,7 @@ def handler(event, context):
 
         # Skip crashes that aren't marked for processing
         if get_throttle_result(crash_id) == DEFER:
-            statsd_incr('antenna.pigeon.defer', 1)
+            statsd_incr('socorro.pigeon.defer', 1)
             continue
 
         accepted_records.append(crash_id)
@@ -130,18 +126,24 @@ def handler(event, context):
         return
 
     try:
-        connection = build_pika_connection(host, port, virtual_host, user, password)
+        connection = build_pika_connection(
+            host=get_from_env('HOST'),
+            port=int(get_from_env('PORT')),
+            virtual_host=get_from_env('VIRTUAL_HOST'),
+            user=get_from_env('USER'),
+            password=get_from_env('PASSWORD')
+        )
         props = pika.BasicProperties(delivery_mode=2)
 
         channel = connection.channel()
-        channel.queue_declare(queue=queue)
+        channel.queue_declare(queue=get_from_env('QUEUE'))
 
         for crash_id in accepted_records:
-            statsd_incr('antenna.pigeon.accept', 1)
+            statsd_incr('socorro.pigeon.accept', 1)
 
             channel.basic_publish(
                 exchange='',
-                routing_key=queue,
+                routing_key=get_from_env('QUEUE'),
                 body=crash_id,
                 properties=props
             )
@@ -149,7 +151,7 @@ def handler(event, context):
     except PIKA_EXCEPTIONS:
         # We've told the pika connection to retry a bunch, so if we hit this,
         # then evil is a foot and there isn't much we can do about it.
-        statsd_incr('antenna.pigeon.pika_error', 1)
+        statsd_incr('socorro.pigeon.pika_error', 1)
         logger.exception('Error: amqp publish failed: %s', crash_id)
 
     finally:
