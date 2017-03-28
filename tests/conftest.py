@@ -20,6 +20,7 @@ os.environ['PIGEON_VIRTUAL_HOST'] = os.environ['RABBITMQ_DEFAULT_VHOST']
 os.environ['PIGEON_HOST'] = os.environ['RABBITMQ_HOST']
 os.environ['PIGEON_PORT'] = '5672'
 os.environ['PIGEON_QUEUE'] = 'socorrodev.normal'
+os.environ['PIGEON_REGION'] = 'us-east-1'
 
 
 from pigeon import get_from_env, build_pika_connection, handler  # noqa

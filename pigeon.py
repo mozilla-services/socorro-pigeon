@@ -33,22 +33,19 @@ logger.setLevel(logging.INFO)
 def get_from_env(key):
     return os.environ['PIGEON_%s' % key]
 
-
 def decrypt(encoded_ciphertext_blob):
-    client = boto3.client('kms', CONFIG['region'])
-    return client.decrypt(CiphertextBlob=b64decode(encoded_ciphertext_blob)['Plaintext']
-
+    client = boto3.client('kms', get_from_env('REGION'))
+    return client.decrypt(CiphertextBlob=b64decode(encoded_ciphertext_blob))['Plaintext']
 
 CONFIG = {
     'host': get_from_env('HOST'),
     'port': int(get_from_env('PORT')),
     'user': get_from_env('USER'),
-    'password': get_from_env('PASSWORD'),
-    'virtual_host': get_from_env('VIRTUAL_HOST'),
+    'password': decrypt(get_from_env('PASSWORD')),
+    'virtual_host': decrypt(get_from_env('VIRTUAL_HOST')),
     'queue': get_from_env('QUEUE'),
     'region': get_from_env('REGION'),
 }
-
 
 def statsd_incr(key, val=1):
     """Sends a specially formatted line for datadog to pick up for statsd incr"""
