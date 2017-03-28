@@ -26,25 +26,41 @@ PIKA_EXCEPTIONS = (
 ACCEPT = '0'
 DEFER = '1'
 
+NOVALUE = object()
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_from_env(key):
-    return os.environ['PIGEON_%s' % key]
+def get_from_env(key, default=NOVALUE):
+    if default is NOVALUE:
+        return os.environ['PIGEON_%s' % key]
+    else:
+        return os.environ.get('PIGEON_%s' % key, default)
 
 
-def decrypt(key):
-    return boto3.client('kms').decrypt(CiphertextBlob=b64decode(os.environ[key]))['Plaintext']
+def decrypt(data):
+    region = get_from_env('S3_REGION', '')
+
+    if not region:
+        logging.error(
+            'No S3 region specified. Please set S3_REGION env var ',
+            'if you want decrypted secrets.'
+        )
+        return data
+
+    return boto3.client('kms', region).decrypt(CiphertextBlob=b64decode(data))['Plaintext']
 
 
 CONFIG = {
     'host': get_from_env('HOST'),
     'port': int(get_from_env('PORT')),
     'user': get_from_env('USER'),
-    'password': get_from_env('PASSWORD'),
-    'virtual_host': get_from_env('VIRTUAL_HOST'),
+    'password': decrypt(get_from_env('PASSWORD')),
+    'virtual_host': decrypt(get_from_env('VIRTUAL_HOST')),
     'queue': get_from_env('QUEUE'),
+
+    's3_region': get_from_env('S3_REGION', ''),
 }
 
 
@@ -101,6 +117,7 @@ def get_throttle_result(crash_id):
 
 
 def build_pika_connection(host, port, virtual_host, user, password):
+    """Build a pika (rabbitmq) connection"""
     return pika.BlockingConnection(
         pika.ConnectionParameters(
             host=host,
