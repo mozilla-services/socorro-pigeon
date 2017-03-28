@@ -34,8 +34,9 @@ def get_from_env(key):
     return os.environ['PIGEON_%s' % key]
 
 
-def decrypt(key):
-    return boto3.client('kms').decrypt(CiphertextBlob=b64decode(os.environ[key]))['Plaintext']
+def decrypt(encoded_ciphertext_blob):
+    client = boto3.client('kms', CONFIG['region'])
+    return client.decrypt(CiphertextBlob=b64decode(encoded_ciphertext_blob)['Plaintext']
 
 
 CONFIG = {
@@ -45,6 +46,7 @@ CONFIG = {
     'password': get_from_env('PASSWORD'),
     'virtual_host': get_from_env('VIRTUAL_HOST'),
     'queue': get_from_env('QUEUE'),
+    'region': get_from_env('REGION'),
 }
 
 
