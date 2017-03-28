@@ -99,8 +99,8 @@ class RabbitMQHelper:
 
     def clear_channel(self):
         channel = self.conn.channel()
-        channel.queue_declare(queue=self.queue)
-        channel.basic_ack(0, True)
+        channel.queue_delete(queue=self.queue)
+        channel.close()
 
     def next_item(self):
         channel = self.conn.channel()
