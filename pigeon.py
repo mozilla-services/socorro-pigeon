@@ -139,15 +139,18 @@ def extract_crash_id(record):
     """
     try:
         key = record['s3']['object']['key']
-        logging.debug('extracting crash id from %s', repr(key))
         if not key.startswith('v2/raw_crash/'):
+            logging.debug('%s: not a raw crash--ignoring', repr(key))
             return None
         crash_id = key.rsplit('/', 1)[-1]
         if not is_crash_id(crash_id):
+            logging.debug('%s: not a crash id--ignoring', repr(key))
             return None
         return crash_id
     except (KeyError, IndexError) as exc:
-        logging.debug('Exception thrown when extracting crashid: %s', exc)
+        logging.debug(
+            '%s: exception thrown when extracting crashid--ignoring: %s', repr(key), exc
+        )
         return None
 
 
@@ -185,9 +188,10 @@ def handler(event, context):
 
         # Extract crash id--if it's not a raw_crash object, skip it.
         crash_id = extract_crash_id(record)
-        logger.info('crash id: %s', crash_id)
         if crash_id is None:
             continue
+
+        logger.info('crash id: %s', crash_id)
 
         # Skip crashes that aren't marked for processing
         if get_throttle_result(crash_id) == DEFER:
