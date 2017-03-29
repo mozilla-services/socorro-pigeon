@@ -22,7 +22,7 @@ os.environ['PIGEON_PORT'] = '5672'
 os.environ['PIGEON_QUEUE'] = 'socorrodev.normal'
 
 
-from pigeon import get_from_env, build_pika_connection, handler  # noqa
+from pigeon import build_pika_connection, Config, handler  # noqa
 
 
 class LambdaContext:
@@ -93,9 +93,9 @@ def client():
 
 
 class RabbitMQHelper:
-    def __init__(self, user, password, vhost, host, port, queue):
+    def __init__(self, host, port, virtual_host, user, password, queue):
         self.queue = queue
-        self.conn = build_pika_connection(host, port, vhost, user, password)
+        self.conn = build_pika_connection(host, port, virtual_host, user, password)
 
     def clear_channel(self):
         channel = self.conn.channel()
@@ -115,13 +115,15 @@ class RabbitMQHelper:
 @pytest.fixture
 def rabbitmq_helper():
     """Returns a RabbitMQ helper instance"""
+    config = Config()
+
     helper = RabbitMQHelper(
-        get_from_env('USER'),
-        get_from_env('PASSWORD'),
-        get_from_env('VIRTUAL_HOST'),
-        get_from_env('HOST'),
-        int(get_from_env('PORT')),
-        get_from_env('QUEUE')
+        host=config.host,
+        port=config.port,
+        virtual_host=config.virtual_host,
+        user=config.user,
+        password=config.password,
+        queue=config.queue,
     )
     helper.clear_channel()
     return helper

@@ -37,7 +37,6 @@ logging.config.dictConfig({
             'format': (
                 '[%(asctime)s] [%(levelname)s] %(name)s: %(message)s'
             ),
-            'datefmt': '%Y-%m-%d %H:%M:%S %z',
         },
     },
     'handlers': {
@@ -64,37 +63,40 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_from_env(key, default=NOVALUE):
-    if default is NOVALUE:
-        return os.environ['PIGEON_%s' % key]
-    else:
-        return os.environ.get('PIGEON_%s' % key, default)
+class Config(object):
+    def __init__(self):
+        self.host = self.get_from_env('HOST')
+        self.port = int(self.get_from_env('PORT'))
+        self.user = self.get_from_env('USER')
+        self.queue = self.get_from_env('QUEUE')
+
+        self.aws_region = self.get_from_env('AWS_REGION', '')
+
+        # Get secrets last because decrypt needs previous vars to get them
+        self.password = self.decrypt(self.get_from_env('PASSWORD'))
+        self.virtual_host = self.decrypt(self.get_from_env('VIRTUAL_HOST'))
+
+    def get_from_env(self, key, default=NOVALUE):
+        if default is NOVALUE:
+            return os.environ['PIGEON_%s' % key]
+        else:
+            return os.environ.get('PIGEON_%s' % key, default)
+
+    def decrypt(self, data):
+        """Decrypts config value"""
+        if not self.aws_region:
+            logger.warning('Please set AWS_REGION. Returning original data.')
+            return data
+
+        kwargs = {
+            'region_name': self.aws_region
+        }
+
+        client = boto3.client('kms', **kwargs)
+        return client.decrypt(CiphertextBlob=b64decode(data))['Plaintext']
 
 
-def decrypt(data):
-    region = get_from_env('S3_REGION', '')
-
-    if not region:
-        logging.error(
-            'No S3 region specified. Please set S3_REGION env var ',
-            'if you want decrypted secrets.'
-        )
-        return data
-
-    client = boto3.client('kms', region_name=region)
-    return client.decrypt(CiphertextBlob=b64decode(data))['Plaintext']
-
-
-CONFIG = {
-    'host': get_from_env('HOST'),
-    'port': int(get_from_env('PORT')),
-    'user': get_from_env('USER'),
-    'password': decrypt(get_from_env('PASSWORD')),
-    'virtual_host': decrypt(get_from_env('VIRTUAL_HOST')),
-    'queue': get_from_env('QUEUE'),
-
-    's3_region': get_from_env('S3_REGION', ''),
-}
+CONFIG = Config()
 
 
 def statsd_incr(key, val=1):
@@ -195,23 +197,23 @@ def handler(event, context):
 
     try:
         connection = build_pika_connection(
-            host=CONFIG['host'],
-            port=CONFIG['port'],
-            virtual_host=CONFIG['virtual_host'],
-            user=CONFIG['user'],
-            password=CONFIG['password'],
+            host=CONFIG.host,
+            port=CONFIG.port,
+            virtual_host=CONFIG.virtual_host,
+            user=CONFIG.user,
+            password=CONFIG.password,
         )
         props = pika.BasicProperties(delivery_mode=2)
 
         channel = connection.channel()
-        channel.queue_declare(queue=CONFIG['queue'])
+        channel.queue_declare(queue=CONFIG.queue)
 
         for crash_id in accepted_records:
             statsd_incr('socorro.pigeon.accept', 1)
 
             channel.basic_publish(
                 exchange='',
-                routing_key=CONFIG['queue'],
+                routing_key=CONFIG.queue,
                 body=crash_id,
                 properties=props
             )

@@ -51,6 +51,8 @@ Configuration
 All configuration for Pigeon relates to the RabbitMQ service it needs to connect
 to.
 
+Required environment variables:
+
 ``PIGEON_HOST``
     The RabbitMQ host.
 
@@ -69,5 +71,7 @@ to.
 ``PIGEON_QUEUE``
     The RabbitMQ queue to use.
 
+``AWS_REGION``
+    The AWS region to use. This is automatically set by Lambda.
 
 If any of these are missing from the environment, Pigeon will raise a ``KeyError``.
