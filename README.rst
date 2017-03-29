@@ -71,7 +71,7 @@ Required environment variables:
 ``PIGEON_QUEUE``
     The RabbitMQ queue to use.
 
-``AWS_REGION``
-    The AWS region to use. This is automatically set by Lambda.
+``PIGEON_AWS_REGION``
+    The AWS region to use.
 
 If any of these are missing from the environment, Pigeon will raise a ``KeyError``.
