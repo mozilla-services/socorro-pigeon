@@ -54,7 +54,7 @@ logging.config.dictConfig({
         'antenna': {
             'propagate': False,
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
         },
     },
 })
@@ -85,7 +85,7 @@ class Config(object):
     def decrypt(self, data):
         """Decrypts config value"""
         if not self.aws_region:
-            logger.warning('Please set AWS_REGION. Returning original data.')
+            logger.warning('Please set PIGEON_AWS_REGION. Returning original data.')
             return data
 
         kwargs = {
