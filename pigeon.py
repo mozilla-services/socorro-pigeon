@@ -6,6 +6,7 @@
 
 from base64 import b64decode
 import logging
+import logging.config
 import os
 import socket
 import time
@@ -28,6 +29,37 @@ DEFER = '1'
 
 NOVALUE = object()
 
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'development': {
+            'format': (
+                '[%(asctime)s] [%(levelname)s] %(name)s: %(message)s'
+            ),
+            'datefmt': '%Y-%m-%d %H:%M:%S %z',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'development',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'antenna': {
+            'propagate': False,
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+})
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -49,7 +81,8 @@ def decrypt(data):
         )
         return data
 
-    return boto3.client('kms', region).decrypt(CiphertextBlob=b64decode(data))['Plaintext']
+    client = boto3.client('kms', region_name=region)
+    return client.decrypt(CiphertextBlob=b64decode(data))['Plaintext']
 
 
 CONFIG = {
