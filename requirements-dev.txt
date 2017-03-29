@@ -1,9 +1,9 @@
 -r requirements.txt
 
 # Test-only requirements
-py==1.4.31 \
-    --hash=sha256:4a3e4f3000c123835ac39cab5ccc510642153bc47bc1f13e2bbb53039540ae69 \
-    --hash=sha256:a6501963c725fc2554dabfece8ae9a8fb5e149c0ac0a42fd2b02c5c1c57fc114
-pytest==3.0.4 \
-    --hash=sha256:f043cb1eaafc9a10c9de77a7d57ba9ccb1d919edb45926b83c29e2482a41101e \
-    --hash=sha256:879fee2c1fdbaacd1bf2c0047677c6dd4aee05b9c1e64330b34d130a584fa40d
+py==1.4.33 \
+    --hash=sha256:81b5e37db3cc1052de438375605fb5d3b3e97f950f415f9143f04697c684d7eb \
+    --hash=sha256:1f9a981438f2acc20470b301a07a496375641f902320f70e31916fe3377385a9
+pytest==3.0.7 \
+    --hash=sha256:66f332ae62593b874a648b10a8cb106bfdacd2c6288ed7dec3713c3a808a6017 \
+    --hash=sha256:b70696ebd1a5e6b627e7e3ac1365a4bc60aaf3495e843c1e70448966c5224cab
