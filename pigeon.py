@@ -23,7 +23,7 @@ PIKA_EXCEPTIONS = (
     socket.timeout
 )
 
-# These values match Antenna throttling return values
+# NOTE(willkg): These values match Antenna throttling return values
 ACCEPT = '0'
 DEFER = '1'
 
@@ -51,7 +51,7 @@ logging.config.dictConfig({
         'level': 'WARNING',
     },
     'loggers': {
-        'antenna': {
+        'pigeon': {
             'propagate': False,
             'handlers': ['console'],
             'level': 'DEBUG',
@@ -59,7 +59,8 @@ logging.config.dictConfig({
     },
 })
 
-logger = logging.getLogger()
+
+logger = logging.getLogger('pigeon')
 logger.setLevel(logging.INFO)
 
 
@@ -84,6 +85,9 @@ class Config(object):
 
     def decrypt(self, data):
         """Decrypts config value"""
+        # NOTE(willkg): Either PIGEON_AWS_REGION is set in the environment, or
+        # we're running the test suite. In the latter case, we don't want to be
+        # using the kms decryption and this should be a no-op.
         if not self.aws_region:
             logger.warning('Please set PIGEON_AWS_REGION. Returning original data.')
             return data
