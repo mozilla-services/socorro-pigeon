@@ -140,15 +140,15 @@ def extract_crash_id(record):
     try:
         key = record['s3']['object']['key']
         if not key.startswith('v2/raw_crash/'):
-            logging.debug('%s: not a raw crash--ignoring', repr(key))
+            logger.debug('%s: not a raw crash--ignoring', repr(key))
             return None
         crash_id = key.rsplit('/', 1)[-1]
         if not is_crash_id(crash_id):
-            logging.debug('%s: not a crash id--ignoring', repr(key))
+            logger.debug('%s: not a crash id--ignoring', repr(key))
             return None
         return crash_id
     except (KeyError, IndexError) as exc:
-        logging.debug(
+        logger.debug(
             '%s: exception thrown when extracting crashid--ignoring: %s', repr(key), exc
         )
         return None
