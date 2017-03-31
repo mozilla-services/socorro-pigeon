@@ -214,7 +214,7 @@ def handler(event, context):
         props = pika.BasicProperties(delivery_mode=2)
 
         channel = connection.channel()
-        channel.queue_declare(queue=CONFIG.queue)
+        channel.queue_declare(queue=CONFIG.queue, durable=True)
 
         for crash_id in accepted_records:
             statsd_incr('socorro.pigeon.accept', 1)

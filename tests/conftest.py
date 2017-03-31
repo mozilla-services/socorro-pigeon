@@ -104,7 +104,7 @@ class RabbitMQHelper:
 
     def next_item(self):
         channel = self.conn.channel()
-        channel.queue_declare(queue=self.queue)
+        channel.queue_declare(queue=self.queue, durable=True)
         method_frame, header_frame, body = channel.basic_get(queue=self.queue)
         if method_frame:
             channel.basic_ack(delivery_tag=method_frame.delivery_tag)
