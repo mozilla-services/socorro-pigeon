@@ -141,6 +141,7 @@ def extract_crash_id(record):
     """
     try:
         key = record['s3']['object']['key']
+        logger.info('looking at key: %s', key)
         if not key.startswith('v2/raw_crash/'):
             logger.debug('%s: not a raw crash--ignoring', repr(key))
             return None
