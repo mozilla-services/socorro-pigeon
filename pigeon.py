@@ -61,7 +61,7 @@ logging.config.dictConfig({
 
 
 logger = logging.getLogger('pigeon')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class Config(object):
@@ -181,6 +181,7 @@ def handler(event, context):
 
     accepted_records = []
 
+    logger.info('number of records: %d', len(event['Records']))
     for record in event['Records']:
         # Skip anything that's not an S3 ObjectCreated:put event.
         if record['eventSource'] != 'aws:s3' or record['eventName'] != 'ObjectCreated:Put':
