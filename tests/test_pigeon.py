@@ -83,6 +83,9 @@ def test_accept(client, rabbitmq_helper, capsys):
     # Test-like files we might have pushed places to make sure things are working
     ('v2/raw_crash/de1/20160918/test', None),
     ('foo/bar/test', None),
+
+    # This is a crash from -prod which currently has a 2 in the accept/defer place
+    ('v2/raw_crash/edd/20170404/edd0cf02-9e6f-443a-b098-8274b2170404', 'edd0cf02-9e6f-443a-b098-8274b2170404'),
 ])
 def test_extract_crash_id(data, expected, client):
     record = client.build_crash_save_events(data)['Records'][0]

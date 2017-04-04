@@ -122,10 +122,12 @@ def is_crash_id(crash_id):
     """
     return (
         # Verify length of the string
-        len(crash_id) == 36 and
-
+        len(crash_id) == 36  # and
+       
         # The 7-to-last character is a throttle result
-        crash_id[-7] in (ACCEPT, DEFER)
+        # FIXME(willkg): We can re-enable this check later after
+        # -prod has been updated to use Antenna.
+        # crash_id[-7] in (ACCEPT, DEFER)
     )
 
 
