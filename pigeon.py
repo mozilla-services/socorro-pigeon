@@ -5,9 +5,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from base64 import b64decode
+import contextlib
 import logging
 import logging.config
 import os
+import random
 import socket
 import time
 
@@ -64,12 +66,36 @@ logger = logging.getLogger('pigeon')
 logger.setLevel(logging.DEBUG)
 
 
+def parse_queues(val):
+    """Takes a string and converts it to a list of (queuename, throttle) tuples
+
+    :arg str val: the configuration value
+
+    :returns: list of (queuename, throttle) tuples
+
+    """
+    # Split the value on , and drop any pre/post whitespace
+    val = [part.strip() for part in val.split(',')]
+
+    # For each thing, if there's a :, then the first part is the throttle as an
+    # int and the second part is the queue name
+    queues = []
+    for mem in val:
+        if ':' in mem:
+            mem = [part.strip() for part in mem.split(':')]
+            queues.append((int(mem[0]), mem[1]))
+        else:
+            queues.append((100, mem))
+
+    return queues
+
+
 class Config(object):
     def __init__(self):
         self.host = self.get_from_env('HOST')
         self.port = int(self.get_from_env('PORT'))
         self.user = self.get_from_env('USER')
-        self.queue = self.get_from_env('QUEUE')
+        self.queues = parse_queues(self.get_from_env('QUEUE'))
 
         self.aws_region = self.get_from_env('AWS_REGION', '')
 
@@ -89,7 +115,7 @@ class Config(object):
         # we're running the test suite. In the latter case, we don't want to be
         # using the kms decryption and this should be a no-op.
         if not self.aws_region:
-            logger.warning('Please set PIGEON_AWS_REGION. Returning original data.')
+            logger.warning('Please set PIGEON_AWS_REGION. Returning original unencrypted data.')
             return data
 
         kwargs = {
@@ -98,6 +124,25 @@ class Config(object):
 
         client = boto3.client('kms', **kwargs)
         return client.decrypt(CiphertextBlob=b64decode(data))['Plaintext']
+
+    @contextlib.contextmanager
+    def override(self, **kwargs):
+        """Context-manager in tests to override config variables
+
+        Pass variable (lowercase) = value as args.
+
+        """
+        old_values = {}
+
+        for key, val in kwargs.items():
+            if getattr(self, key, None) is not None:
+                old_values[key] = getattr(self, key)
+                setattr(self, key, val)
+
+        yield
+
+        for key, val in old_values.items():
+            setattr(self, key, val)
 
 
 CONFIG = Config()
@@ -123,7 +168,7 @@ def is_crash_id(crash_id):
     return (
         # Verify length of the string
         len(crash_id) == 36  # and
-       
+
         # The 7-to-last character is a throttle result
         # FIXME(willkg): We can re-enable this check later after
         # -prod has been updated to use Antenna.
@@ -218,17 +263,23 @@ def handler(event, context):
         props = pika.BasicProperties(delivery_mode=2)
 
         channel = connection.channel()
-        channel.queue_declare(queue=CONFIG.queue, durable=True)
 
         for crash_id in accepted_records:
             statsd_incr('socorro.pigeon.accept', 1)
 
-            channel.basic_publish(
-                exchange='',
-                routing_key=CONFIG.queue,
-                body=crash_id,
-                properties=props
-            )
+            for throttle, queue in CONFIG.queues:
+                if throttle != 100 and throttle <= random.randint(0, 100):
+                    logger.info('%s: crash throttled (%s:%s)', crash_id, throttle, queue)
+                    statsd_incr('socorro.pigeon.throttled', 1)
+                    continue
+
+                logger.info('%s: publishing to %s', crash_id, queue)
+                channel.basic_publish(
+                    exchange='',
+                    routing_key=queue,
+                    body=crash_id,
+                    properties=props
+                )
 
     except PIKA_EXCEPTIONS:
         # We've told the pika connection to retry a bunch, so if we hit this,
