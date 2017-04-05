@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import os
+import random
 import sys
 import uuid
 
@@ -22,7 +23,7 @@ os.environ['PIGEON_PORT'] = '5672'
 os.environ['PIGEON_QUEUE'] = 'socorrodev.normal'
 
 
-from pigeon import build_pika_connection, Config, handler  # noqa
+from pigeon import build_pika_connection, CONFIG, handler  # noqa
 
 
 class LambdaContext:
@@ -93,19 +94,40 @@ def client():
 
 
 class RabbitMQHelper:
-    def __init__(self, host, port, virtual_host, user, password, queue):
-        self.queue = queue
-        self.conn = build_pika_connection(host, port, virtual_host, user, password)
+    def __init__(self):
+        self.build_conn()
 
-    def clear_channel(self):
+    def build_conn(self):
+        """This builds a connection based on CONFIG values"""
+        self.conn = build_pika_connection(
+            CONFIG.host,
+            CONFIG.port,
+            CONFIG.virtual_host,
+            CONFIG.user,
+            CONFIG.password
+        )
+        self.clear_queues()
+        self.declare_queues()
+
+    def declare_queues(self):
         channel = self.conn.channel()
-        channel.queue_delete(queue=self.queue)
+        for throttle, queue in CONFIG.queues:
+            channel.queue_declare(queue=queue, durable=True)
         channel.close()
 
-    def next_item(self):
+    def clear_queues(self):
         channel = self.conn.channel()
-        channel.queue_declare(queue=self.queue, durable=True)
-        method_frame, header_frame, body = channel.basic_get(queue=self.queue)
+        for throttle, queue in CONFIG.queues:
+            channel.queue_delete(queue=queue)
+        channel.close()
+
+    def next_item(self, queue=None):
+        if queue is None:
+            # If queue is None, then take the first (and possibly only) queue
+            # from self.queues
+            queue = CONFIG.queues[0][1]
+        channel = self.conn.channel()
+        method_frame, header_frame, body = channel.basic_get(queue=queue)
         if method_frame:
             channel.basic_ack(delivery_tag=method_frame.delivery_tag)
             return body
@@ -114,16 +136,19 @@ class RabbitMQHelper:
 
 @pytest.fixture
 def rabbitmq_helper():
-    """Returns a RabbitMQ helper instance"""
-    config = Config()
+    """Returns a RabbitMQ helper instance based on current CONFIG values"""
+    return RabbitMQHelper()
 
-    helper = RabbitMQHelper(
-        host=config.host,
-        port=config.port,
-        virtual_host=config.virtual_host,
-        user=config.user,
-        password=config.password,
-        queue=config.queue,
-    )
-    helper.clear_channel()
-    return helper
+
+@pytest.yield_fixture
+def mock_randint_always_20():
+    """Mocks random.randint to always return 20"""
+    old_randint = random.randint
+
+    def mock_randint(a, b):
+        print('MOCKED RANDINT')
+        return 20
+
+    random.randint = mock_randint
+    yield
+    random.randint = old_randint

@@ -4,7 +4,7 @@
 
 import pytest
 
-from pigeon import extract_crash_id
+from pigeon import CONFIG, extract_crash_id, parse_queues
 
 
 def test_basic(client, rabbitmq_helper):
@@ -44,6 +44,40 @@ def test_non_put_event(client, rabbitmq_helper):
     # Verify that no rabbit message got created
     item = rabbitmq_helper.next_item()
     assert item is None
+
+
+def test_multiple_queues(client, rabbitmq_helper):
+    queues = [(100, 'normal'), (100, 'submitter')]
+
+    with CONFIG.override(queues=queues):
+        # Rebuild the connection using the overridden values
+        rabbitmq_helper.build_conn()
+
+        # Create a crash_id event and run pigeon
+        crash_id = 'de1bb258-cbbf-4589-a673-34f800160918'
+        events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
+        assert client.run(events) is None
+
+        # Verify the crash_id shows up in both queues
+        for throttle, queue in queues:
+            assert rabbitmq_helper.next_item(queue) == crash_id
+
+
+def test_queue_throttling(client, rabbitmq_helper, mock_randint_always_20):
+    queues = [(100, 'normal'), (15, 'submitter')]
+
+    with CONFIG.override(queues=queues):
+        # Rebuild the connection using the overridden values
+        rabbitmq_helper.build_conn()
+
+        # Create a crash_id event and run pigeon
+        crash_id = 'de1bb258-cbbf-4589-a673-34f800160918'
+        events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
+        assert client.run(events) is None
+
+        # Verify the crash_id shows up in both queues
+        assert rabbitmq_helper.next_item('normal') == crash_id
+        assert rabbitmq_helper.next_item('submitter') is None
 
 
 def test_defer(client, rabbitmq_helper, capsys):
@@ -90,3 +124,19 @@ def test_accept(client, rabbitmq_helper, capsys):
 def test_extract_crash_id(data, expected, client):
     record = client.build_crash_save_events(data)['Records'][0]
     assert extract_crash_id(record) == expected
+
+
+@pytest.mark.parametrize('data, expected', [
+    # Single queue as a string
+    ('socorro.normal', [(100, 'socorro.normal')]),
+    ('  socorro.normal\n ', [(100, 'socorro.normal')]),
+
+    # Test throttle number
+    ('15:socorro.normal', [(15, 'socorro.normal')]),
+    ('  15 : socorro.normal\n ', [(15, 'socorro.normal')]),
+
+    # Test multiple queues
+    ('socorro.normal , 10:socorro.submitter', [(100, 'socorro.normal'), (10, 'socorro.submitter')])
+])
+def test_parse_queues(data, expected):
+    assert parse_queues(data) == expected

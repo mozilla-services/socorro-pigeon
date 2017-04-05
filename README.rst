@@ -71,6 +71,19 @@ Required environment variables:
 ``PIGEON_QUEUE``
     The RabbitMQ queue to use.
 
+    Queues are comma separated.
+
+    Each queue can specify a throttle in the form of ``THROTTLE:QUEUE`` where
+    the throttle is an integer between 0 (no crashes are published (which is
+    silly)) and 100 (all crashes are published).
+
+    Example values:
+
+    * ``normal``: publish to a single "normal" queue
+    * ``normal,submitter``: publish to "normal" and "submitter" queues
+    * ``normal,15:submitter``: publish 100% of things to "normal" and 15% of things to "submitter" queues
+    * ``normal,submitter,jimbob``: publish to "normal", "submitter", and "jimbob" queues
+
 ``PIGEON_AWS_REGION``
     The AWS region to use.
 
