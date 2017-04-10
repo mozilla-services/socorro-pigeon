@@ -184,6 +184,22 @@ def is_crash_id(crash_id):
     )
 
 
+def extract_bucket_name(record):
+    """Given a record, extracts the bucket name
+
+    :arg dict record: the AWS event record
+
+    :returns: None (no clue what happened) or the bucket name
+
+    """
+    try:
+        return record['s3']['bucket']['name']
+    except KeyError as exc:
+        logger.exception(
+            'Exception thrown when extracting bucket name.'
+        )
+        return None
+
 def extract_crash_id(record):
     """Given a record, extracts the crash id
 
@@ -192,6 +208,7 @@ def extract_crash_id(record):
     :returns: None (not a crash id) or the crash_id
 
     """
+    key = 'not extracted yet'
     try:
         key = record['s3']['object']['key']
         logger.info('looking at key: %s', key)
@@ -243,12 +260,15 @@ def handler(event, context):
         if record['eventSource'] != 'aws:s3' or record['eventName'] != 'ObjectCreated:Put':
             continue
 
+        # Extract bucket name for debugging.
+        bucket = extract_bucket_name(record)
+
         # Extract crash id--if it's not a raw_crash object, skip it.
         crash_id = extract_crash_id(record)
         if crash_id is None:
             continue
 
-        logger.info('crash id: %s', crash_id)
+        logger.info('crash id: %s in %s', crash_id, bucket)
 
         # Skip crashes that aren't marked for processing
         if get_throttle_result(crash_id) == DEFER:
