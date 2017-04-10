@@ -99,6 +99,8 @@ class Config(object):
 
         self.aws_region = self.get_from_env('AWS_REGION', '')
 
+        self.env = self.get_from_env('ENV', '')
+
         # Get secrets last because decrypt needs previous vars to get them
         self.password = self.decrypt(self.get_from_env('PASSWORD'))
         self.virtual_host = self.decrypt(self.get_from_env('VIRTUAL_HOST'))
@@ -148,12 +150,18 @@ class Config(object):
 CONFIG = Config()
 
 
-def statsd_incr(key, val=1):
+def statsd_incr(key, value=1, tags=None):
     """Sends a specially formatted line for datadog to pick up for statsd incr"""
-    print('MONITORING|%(timestamp)s|%(val)s|count|%(key)s|' % {
+    if CONFIG.env:
+        tags = '#env:%s' % CONFIG.env
+    else:
+        tags = ''
+
+    print('MONITORING|%(timestamp)s|%(val)s|count|%(key)s|%(tags)s' % {
         'timestamp': int(time.time()),
         'key': key,
-        'val': val
+        'val': value,
+        'tags': tags,
     })
 
 
@@ -244,7 +252,7 @@ def handler(event, context):
 
         # Skip crashes that aren't marked for processing
         if get_throttle_result(crash_id) == DEFER:
-            statsd_incr('socorro.pigeon.defer', 1)
+            statsd_incr('socorro.pigeon.defer', value=1)
             continue
 
         accepted_records.append(crash_id)
@@ -265,12 +273,12 @@ def handler(event, context):
         channel = connection.channel()
 
         for crash_id in accepted_records:
-            statsd_incr('socorro.pigeon.accept', 1)
+            statsd_incr('socorro.pigeon.accept', value=1)
 
             for throttle, queue in CONFIG.queues:
                 if throttle != 100 and throttle <= random.randint(0, 100):
                     logger.info('%s: crash throttled (%s:%s)', crash_id, throttle, queue)
-                    statsd_incr('socorro.pigeon.throttled', 1)
+                    statsd_incr('socorro.pigeon.throttled', value=1)
                     continue
 
                 logger.info('%s: publishing to %s', crash_id, queue)
@@ -284,7 +292,7 @@ def handler(event, context):
     except PIKA_EXCEPTIONS:
         # We've told the pika connection to retry a bunch, so if we hit this,
         # then evil is a foot and there isn't much we can do about it.
-        statsd_incr('socorro.pigeon.pika_error', 1)
+        statsd_incr('socorro.pigeon.pika_error', value=1)
         logger.exception('Error: amqp publish failed: %s', crash_id)
 
     finally:

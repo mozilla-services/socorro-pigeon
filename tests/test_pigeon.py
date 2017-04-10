@@ -80,6 +80,20 @@ def test_queue_throttling(client, rabbitmq_helper, mock_randint_always_20):
         assert rabbitmq_helper.next_item('submitter') is None
 
 
+def test_env_tag(client, rabbitmq_helper, capsys):
+    with CONFIG.override(env='stage'):
+        crash_id = 'de1bb258-cbbf-4589-a673-34f800160918'
+        #                                        ^ accept
+        events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
+        assert client.run(events) is None
+
+        item = rabbitmq_helper.next_item()
+        assert item == crash_id
+
+        stdout, stderr = capsys.readouterr()
+        assert '|1|count|socorro.pigeon.accept|#env:stage\n' in stdout
+
+
 def test_defer(client, rabbitmq_helper, capsys):
     crash_id = 'de1bb258-cbbf-4589-a673-34f801160918'
     #                                        ^ defer
