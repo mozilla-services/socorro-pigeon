@@ -315,6 +315,10 @@ def handler(event, context):
         statsd_incr('socorro.pigeon.pika_error', value=1)
         logger.exception('Error: amqp publish failed: %s', crash_id)
 
+    except Exeption:
+        statsd_incr('socorro.pigeon.unknown_error', value=1)
+        logger.exception('Error: amqp publish failed for unknown reason: %s', crash_id)
+
     finally:
         if connection is not None:
             connection.close()
