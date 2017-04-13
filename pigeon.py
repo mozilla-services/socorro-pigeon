@@ -271,8 +271,11 @@ def handler(event, context):
         logger.info('crash id: %s in %s', crash_id, bucket)
 
         # Skip crashes that aren't marked for processing
-        if get_throttle_result(crash_id) == DEFER:
-            statsd_incr('socorro.pigeon.defer', value=1)
+        if get_throttle_result(crash_id) != ACCEPT:
+            if get_throttle_result(crash_id) == DEFER:
+                statsd_incr('socorro.pigeon.defer', value=1)
+            else:
+                statsd_incr('socorro.pigeon.junk', value=1)
             continue
 
         accepted_records.append(crash_id)
