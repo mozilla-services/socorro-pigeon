@@ -270,13 +270,22 @@ def handler(event, context):
 
         logger.info('crash id: %s in %s', crash_id, bucket)
 
-        # Skip crashes that aren't marked for processing
-        if get_throttle_result(crash_id) != ACCEPT:
+        # FIXME(willkg): We use different logic for stage and prod at the moment, but
+        # this will go away soon.
+        if CONFIG.env == 'stage':
+            # Skip crashes that are marked DEFER
             if get_throttle_result(crash_id) == DEFER:
                 statsd_incr('socorro.pigeon.defer', value=1)
-            else:
-                statsd_incr('socorro.pigeon.junk', value=1)
-            continue
+                continue
+
+        else:
+            # Skip crashes that aren't marked ACCEPT
+            if get_throttle_result(crash_id) != ACCEPT:
+                if get_throttle_result(crash_id) == DEFER:
+                    statsd_incr('socorro.pigeon.defer', value=1)
+                else:
+                    statsd_incr('socorro.pigeon.junk', value=1)
+                continue
 
         accepted_records.append(crash_id)
 

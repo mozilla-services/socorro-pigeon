@@ -134,6 +134,20 @@ def test_junk(client, rabbitmq_helper, capsys):
     assert '|1|count|socorro.pigeon.junk|' in stdout
 
 
+def test_junk_in_stage(client, rabbitmq_helper, capsys):
+    with CONFIG.override(env='stage'):
+        crash_id = 'de1bb258-cbbf-4589-a673-34f802160918'
+        #                                        ^ junk
+        events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
+        assert client.run(events) is None
+
+        item = rabbitmq_helper.next_item()
+        assert item == crash_id
+
+        stdout, stderr = capsys.readouterr()
+        assert '|1|count|socorro.pigeon.accept|' in stdout
+
+
 @pytest.mark.parametrize('data, expected', [
     # Raw crash file
     ('v2/raw_crash/de1/20160918/de1bb258-cbbf-4589-a673-34f800160918', 'de1bb258-cbbf-4589-a673-34f800160918'),
