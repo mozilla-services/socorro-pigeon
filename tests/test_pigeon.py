@@ -64,7 +64,7 @@ def test_multiple_queues(client, rabbitmq_helper):
 
 
 def test_queue_throttling(client, rabbitmq_helper, mock_randint_always_20):
-    queues = [(100, 'normal'), (15, 'submitter')]
+    queues = [(100, 'normal'), (15, 'submitter'), (0, 'devnull')]
 
     with CONFIG.override(queues=queues):
         # Rebuild the connection using the overridden values
@@ -78,6 +78,7 @@ def test_queue_throttling(client, rabbitmq_helper, mock_randint_always_20):
         # Verify the crash_id shows up in both queues
         assert rabbitmq_helper.next_item('normal') == crash_id
         assert rabbitmq_helper.next_item('submitter') is None
+        assert rabbitmq_helper.next_item('devnull') is None
 
 
 def test_env_tag(client, rabbitmq_helper, capsys):
