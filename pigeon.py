@@ -31,21 +31,21 @@ DEFER = '1'
 
 NOVALUE = object()
 
+
 logging.config.dictConfig({
     'version': 1,
     'disable_existing_loggers': True,
     'formatters': {
-        'development': {
-            'format': (
-                '[%(asctime)s] [%(levelname)s] %(name)s: %(message)s'
-            ),
+        'mozlog': {
+            '()': 'dockerflow.logging.JsonLogFormatter',
+            'logger_name': 'antenna',
         },
     },
     'handlers': {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'development',
+            'formatter': 'mozlog',
         },
     },
     'root': {
