@@ -1,28 +1,58 @@
-machine:
-  pre:
-     # install updated docker
-     - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
-     - pip install docker-compose
-  services:
-    - docker
-  python:
-    version: 2.7.11
+version: 2
+jobs:
+  build:
+    docker:
+      # base image for primary container
+      - image: circleci/python:3.6.1
 
-dependencies:
-  override:
-    # create a version.json per https://github.com/mozilla-services/Dockerflow/blob/master/docs/version_object.md
-    # we don't dockerflow this, but it's handy to have a build artifact
-    - >
-        printf '{"commit":"%s","version":"%s","source":"https://github.com/%s/%s","build":"%s"}\n'
-        "$CIRCLE_SHA1"
-        "$CIRCLE_TAG"
-        "$CIRCLE_PROJECT_USERNAME"
-        "$CIRCLE_PROJECT_REPONAME"
-        "$CIRCLE_BUILD_URL" > version.json
-    - cp version.json $CIRCLE_ARTIFACTS
+    working_directory: ~/pigeon
 
-test:
-  pre:
-    - chmod -R 777 $CIRCLE_TEST_REPORTS
-  override:
-    - make test
+    steps:
+      - checkout
+
+      - run:
+          name: Create version.json
+          command: |
+            # create a version.json per https://github.com/mozilla-services/Dockerflow/blob/master/docs/version_object.md
+            # we don't dockerflow this, but it's handy to have a build artifact
+            printf '{"commit":"%s","version":"%s","source":"https://github.com/%s/%s","build":"%s"}\n' \
+            "$CIRCLE_SHA1" \
+            "$CIRCLE_TAG" \
+            "$CIRCLE_PROJECT_USERNAME" \
+            "$CIRCLE_PROJECT_REPONAME" \
+            "$CIRCLE_BUILD_URL" > version.json
+
+      - store_artifacts:
+          path: version.json
+
+      - setup_remote_docker
+
+      - run:
+          name: Build images
+          command: make build
+
+      - run:
+          name:  Run tests
+          # Have to use docker so we don't mount a volume which doesn't
+          # work in Circle CI
+          command: |
+            docker-compose up -d rabbitmq
+            docker network ls
+            docker run \
+              --rm \
+              --workdir=/app \
+              --network=pigeon_default \
+              --link=pigeon_rabbitmq_1 \
+              --env-file=docker.env \
+              pigeon_lambda:latest \
+              py.test
+
+workflows:
+  version: 2
+
+  build-test-push:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
