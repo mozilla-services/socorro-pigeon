@@ -125,7 +125,8 @@ class Config(object):
         }
 
         client = boto3.client('kms', **kwargs)
-        return client.decrypt(CiphertextBlob=b64decode(data))['Plaintext']
+        text_as_bytes = client.decrypt(CiphertextBlob=b64decode(data))['Plaintext']
+        return text_as_bytes.decode('ascii')
 
     @contextlib.contextmanager
     def override(self, **kwargs):
