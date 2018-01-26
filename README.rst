@@ -87,4 +87,11 @@ Required environment variables:
 ``PIGEON_AWS_REGION``
     The AWS region to use.
 
-If any of these are missing from the environment, Pigeon will raise a ``KeyError``.
+``PIGEON_ENV``
+    Optional. The name of the environment. This should be all letters with no
+    punctuation. This should be unique between environments. For example,
+    "prod", "stage", and "newstage".
+
+
+If any of these are required, but missing from the environment, Pigeon will
+raise a ``KeyError``.
