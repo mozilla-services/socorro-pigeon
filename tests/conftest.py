@@ -10,17 +10,14 @@ import uuid
 import pytest
 
 
-# Insert parent directory in sys.path so we can import pigeon
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-
-# Insert test env variables
-os.environ['PIGEON_USER'] = os.environ['RABBITMQ_DEFAULT_USER']
-os.environ['PIGEON_PASSWORD'] = os.environ['RABBITMQ_DEFAULT_PASS']
-os.environ['PIGEON_VIRTUAL_HOST'] = os.environ['RABBITMQ_DEFAULT_VHOST']
-os.environ['PIGEON_HOST'] = os.environ['RABBITMQ_HOST']
-os.environ['PIGEON_PORT'] = '5672'
-os.environ['PIGEON_QUEUE'] = 'socorrodev.normal'
+# Insert build/ directory in sys.path so we can import pigeon
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        'build'
+    )
+)
 
 
 from pigeon import build_pika_connection, CONFIG, handler  # noqa
@@ -52,6 +49,28 @@ class LambdaContext:
         return 5000
 
 
+def build_crash_save_events(keys):
+    if isinstance(keys, str):
+        keys = [keys]
+
+    # FIXME(willkg): This only generates a record that has the stuff that
+    # pigeon is looking for. It's not a full record.
+    return {
+        'Records': [
+            {
+                'eventSource': 'aws:s3',
+                'eventName': 'ObjectCreated:Put',
+                's3': {
+                    'object': {
+                        'key': key
+                    }
+                }
+            }
+            for key in keys
+        ]
+    }
+
+
 class PigeonClient:
     """Class for pigeon in the AWS lambda environment"""
     def crash_id_to_path(self, crash_id):
@@ -62,25 +81,7 @@ class PigeonClient:
         )
 
     def build_crash_save_events(self, keys):
-        if isinstance(keys, str):
-            keys = [keys]
-
-        # FIXME(willkg): This only generates a record that has the stuff that
-        # pigeon is looking for. It's not a full record.
-        return {
-            'Records': [
-                {
-                    'eventSource': 'aws:s3',
-                    'eventName': 'ObjectCreated:Put',
-                    's3': {
-                        'object': {
-                            'key': key
-                        }
-                    }
-                }
-                for key in keys
-            ]
-        }
+        return build_crash_save_events(keys)
 
     def run(self, events):
         result = handler(events, LambdaContext())

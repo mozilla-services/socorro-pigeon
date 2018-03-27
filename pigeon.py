@@ -34,7 +34,7 @@ NOVALUE = object()
 
 logging.config.dictConfig({
     'version': 1,
-    'disable_existing_loggers': True,
+    # 'disable_existing_loggers': True,
     'formatters': {
         'mozlog': {
             '()': 'dockerflow.logging.JsonLogFormatter',
@@ -71,7 +71,7 @@ def parse_queues(val):
 
     :arg str val: the configuration value
 
-    :returns: list of (queuename, throttle) tuples
+    :returns: list of (throttle, queuename) tuples
 
     """
     # Split the value on , and drop any pre/post whitespace
