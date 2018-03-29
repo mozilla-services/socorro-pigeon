@@ -49,28 +49,6 @@ class LambdaContext:
         return 5000
 
 
-def build_crash_save_events(keys):
-    if isinstance(keys, str):
-        keys = [keys]
-
-    # FIXME(willkg): This only generates a record that has the stuff that
-    # pigeon is looking for. It's not a full record.
-    return {
-        'Records': [
-            {
-                'eventSource': 'aws:s3',
-                'eventName': 'ObjectCreated:Put',
-                's3': {
-                    'object': {
-                        'key': key
-                    }
-                }
-            }
-            for key in keys
-        ]
-    }
-
-
 class PigeonClient:
     """Class for pigeon in the AWS lambda environment"""
     def crash_id_to_path(self, crash_id):
@@ -81,7 +59,25 @@ class PigeonClient:
         )
 
     def build_crash_save_events(self, keys):
-        return build_crash_save_events(keys)
+        if isinstance(keys, str):
+            keys = [keys]
+
+        # FIXME(willkg): This only generates a record that has the stuff that
+        # pigeon is looking for. It's not a full record.
+        return {
+            'Records': [
+                {
+                    'eventSource': 'aws:s3',
+                    'eventName': 'ObjectCreated:Put',
+                    's3': {
+                        'object': {
+                            'key': key
+                        }
+                    }
+                }
+                for key in keys
+            ]
+        }
 
     def run(self, events):
         result = handler(events, LambdaContext())
