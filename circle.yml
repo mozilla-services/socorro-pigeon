@@ -30,7 +30,7 @@ jobs:
 
       - run:
           name: Build Docker images and install Python libs
-          command: make build
+          command: bin/run_build.sh
 
       - run:
           name: Run tests

@@ -18,10 +18,7 @@ help:
 build-containers: .container-test
 
 build-libs:
-	test -d build/ || mkdir build/
-	# Install requirements and link pigeon into build/
-	${DC} run -u "${HOSTUSER}" lambda-build pip install --disable-pip-version-check --ignore-installed --no-cache-dir -r /tmp/requirements.txt -t /tmp/build/
-	cp pigeon.py build/pigeon.py
+	${DC} run -u "${HOSTUSER}" test ./bin/run_build.sh
 
 build: build-containers build-libs
 
