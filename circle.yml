@@ -29,7 +29,11 @@ jobs:
       - setup_remote_docker
 
       - run:
-          name: Build Docker images and install Python libs
+          name: Build images
+          command: make build-containers
+
+      - run:
+          name: Build libs
           command: bin/run_build.sh
 
       - run:
