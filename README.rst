@@ -19,8 +19,8 @@ The accept/defer annotation is the 7th-to-last character of the key::
 Quickstart
 ==========
 
-1. `Install docker 1.10.0+ <https://docs.docker.com/engine/installation/>`_ and
-   `install docker-compose 1.6.0+ <https://docs.docker.com/compose/install/>`_
+1. `Install docker 18.00.0+ <https://docs.docker.com/install/>`_ and
+   `install docker-compose 1.20.0+ <https://docs.docker.com/compose/install/>`_
    on your machine.
 
    You'll also need git, make, and bash.

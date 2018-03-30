@@ -7,6 +7,8 @@
 # This runs an integration test by invoking pigeon with a series of
 # keys and then checking the queue to see what got posted.
 
+set -e
+
 # First, empty the queues quietly.
 (docker-compose run test ./bin/consume_queue.py) 2>&1 > /dev/null
 
