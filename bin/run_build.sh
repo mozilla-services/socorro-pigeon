@@ -9,7 +9,7 @@
 # Create the dir if it doesn't exist
 test -d build/ || mkdir build/
 
-# Install requirements and link pigeon into build/
+# Install requirements into build/
 pip install --disable-pip-version-check --ignore-installed --no-cache-dir -r requirements.txt -t build/
 
 # Copy pigeon into package
