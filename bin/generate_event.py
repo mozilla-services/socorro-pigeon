@@ -13,7 +13,7 @@ import json
 import sys
 
 
-def make_event(key, event_name='ObjectCreated:Put', bucket='us-west-2'):
+def make_event(key, event_name='ObjectCreated:Put', bucket='dev_bucket'):
     """Generates an S3 event
 
     .. Note::
@@ -52,7 +52,7 @@ def main(argv):
         help='the event triggered'
     )
     parser.add_argument(
-        '--bucket', default='us-west-2',
+        '--bucket', default='dev_bucket',
         help='the bucket that generated the event'
     )
     parser.add_argument(
