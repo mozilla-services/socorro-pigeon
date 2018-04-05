@@ -10,17 +10,14 @@ import uuid
 import pytest
 
 
-# Insert parent directory in sys.path so we can import pigeon
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-
-# Insert test env variables
-os.environ['PIGEON_USER'] = os.environ['RABBITMQ_DEFAULT_USER']
-os.environ['PIGEON_PASSWORD'] = os.environ['RABBITMQ_DEFAULT_PASS']
-os.environ['PIGEON_VIRTUAL_HOST'] = os.environ['RABBITMQ_DEFAULT_VHOST']
-os.environ['PIGEON_HOST'] = os.environ['RABBITMQ_HOST']
-os.environ['PIGEON_PORT'] = '5672'
-os.environ['PIGEON_QUEUE'] = 'socorrodev.normal'
+# Insert build/ directory in sys.path so we can import pigeon
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        'build'
+    )
+)
 
 
 from pigeon import build_pika_connection, CONFIG, handler  # noqa

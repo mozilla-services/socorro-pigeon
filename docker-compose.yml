@@ -4,19 +4,34 @@
 # Note: Requires docker 1.10.0+ and docker-compose 1.6.0+.
 version: "2"
 services:
-  lambda:
+  test:
     build:
       context: .
-      dockerfile: Dockerfile
-    env_file: docker.env
+      dockerfile: docker/test/Dockerfile
+    env_file: docker/lambda.env
     volumes:
       - .:/app
     links:
       - rabbitmq
+
+  lambda-run:
+    # https://hub.docker.com/r/lambci/lambda/
+    image: lambci/lambda:python3.6
+    env_file: docker/lambda.env
+    volumes:
+      - ./build:/var/task
+    links:
+      - rabbitmq
+
+  lambda-build:
+    # https://hub.docker.com/r/lambci/lambda/
+    image: lambci/lambda:build-python3.6
+    volumes:
+      - .:/tmp
 
   rabbitmq:
     # https://hub.docker.com/_/rabbitmq/
     # FIXME: pin this to the version of rabbitmq we're using in -stage
     # and -prod
     image: rabbitmq
-    env_file: docker.env
+    env_file: docker/lambda.env
