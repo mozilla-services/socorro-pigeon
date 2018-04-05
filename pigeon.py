@@ -10,6 +10,7 @@ import logging
 import logging.config
 import os
 import random
+import re
 import socket
 import time
 
@@ -167,6 +168,18 @@ def statsd_incr(key, value=1, tags=None):
     })
 
 
+CRASH_ID_RE = re.compile(r"""
+    ^
+    [a-f0-9]{8}-
+    [a-f0-9]{4}-
+    [a-f0-9]{4}-
+    [a-f0-9]{4}-
+    [a-f0-9]{6}
+    [0-9]{6}      # date in YYMMDD
+    $
+""", re.VERBOSE)
+
+
 def is_crash_id(crash_id):
     """Verifies a given string is a crash id
 
@@ -176,32 +189,15 @@ def is_crash_id(crash_id):
 
     """
     return (
-        # Verify length of the string
-        len(crash_id) == 36  # and
+        # Match structure
+        bool(CRASH_ID_RE.match(crash_id)) and
 
         # The 7-to-last character is a throttle result
-        # FIXME(willkg): We can re-enable this check later after
-        # -prod has been updated to use Antenna.
-        # crash_id[-7] in (ACCEPT, DEFER)
+        crash_id[-7] in (ACCEPT, DEFER)
     )
 
 
-def extract_bucket_name(record):
-    """Given a record, extracts the bucket name
-
-    :arg dict record: the AWS event record
-
-    :returns: None (no clue what happened) or the bucket name
-
-    """
-    try:
-        return record['s3']['bucket']['name']
-    except KeyError:
-        logger.exception('Exception thrown when extracting bucket name.')
-        return None
-
-
-def extract_crash_id(record):
+def extract_crash_id_from_record(record):
     """Given a record, extracts the crash id
 
     :arg dict record: the AWS event record
@@ -262,31 +258,19 @@ def handler(event, context):
             continue
 
         # Extract bucket name for debugging.
-        bucket = extract_bucket_name(record)
+        bucket = record['s3']['bucket']['name']
 
         # Extract crash id--if it's not a raw_crash object, skip it.
-        crash_id = extract_crash_id(record)
+        crash_id = extract_crash_id_from_record(record)
         if crash_id is None:
             continue
 
         logger.info('crash id: %s in %s', crash_id, bucket)
 
-        # FIXME(willkg): We use different logic for stage and prod at the moment, but
-        # this will go away soon.
-        if CONFIG.env == 'stage':
-            # Skip crashes that are marked DEFER
-            if get_throttle_result(crash_id) == DEFER:
-                statsd_incr('socorro.pigeon.defer', value=1)
-                continue
-
-        else:
-            # Skip crashes that aren't marked ACCEPT
-            if get_throttle_result(crash_id) != ACCEPT:
-                if get_throttle_result(crash_id) == DEFER:
-                    statsd_incr('socorro.pigeon.defer', value=1)
-                else:
-                    statsd_incr('socorro.pigeon.junk', value=1)
-                continue
+        # Skip crashes marked DEFER
+        if get_throttle_result(crash_id) == DEFER:
+            statsd_incr('socorro.pigeon.defer', value=1)
+            continue
 
         accepted_records.append(crash_id)
 

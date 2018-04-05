@@ -71,7 +71,10 @@ class PigeonClient:
                     'eventName': 'ObjectCreated:Put',
                     's3': {
                         'object': {
-                            'key': key
+                            'key': key,
+                        },
+                        'bucket': {
+                            'name': 'dev_bucket',
                         }
                     }
                 }
