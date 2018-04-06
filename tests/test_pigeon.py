@@ -121,7 +121,7 @@ def test_accept(client, rabbitmq_helper, capsys):
     assert '|1|count|socorro.pigeon.accept|' in stdout
 
 
-def test_junk_is_dropped(client, rabbitmq_helper, capsys):
+def test_junk_is_dropped(client, rabbitmq_helper):
     crash_id = 'de1bb258-cbbf-4589-a673-34f802160918'
     #                                        ^ junk
     events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
@@ -129,6 +129,18 @@ def test_junk_is_dropped(client, rabbitmq_helper, capsys):
 
     item = rabbitmq_helper.next_item()
     assert item is None
+
+
+def test_bad_event_raises_exception(client):
+    crash_id = 'de1bb258-cbbf-4589-a673-34f800160918'
+    events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
+
+    # Remove the bucket bits so pigeon kicks up an error
+    del events['Records'][0]['s3']['bucket']
+
+    # Make sure .run() raises the error
+    with pytest.raises(KeyError):
+        client.run(events)
 
 
 @pytest.mark.parametrize('data, expected', [

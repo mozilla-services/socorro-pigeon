@@ -311,10 +311,12 @@ def handler(event, context):
         # then evil is a foot and there isn't much we can do about it.
         statsd_incr('socorro.pigeon.pika_error', value=1)
         logger.exception('Error: amqp publish failed: %s', crash_id)
+        raise
 
     except Exception:
         statsd_incr('socorro.pigeon.unknown_error', value=1)
         logger.exception('Error: amqp publish failed for unknown reason: %s', crash_id)
+        raise
 
     finally:
         if connection is not None:
