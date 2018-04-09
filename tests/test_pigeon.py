@@ -121,9 +121,10 @@ def test_accept(client, rabbitmq_helper, capsys):
     assert '|1|count|socorro.pigeon.accept|' in stdout
 
 
-def test_junk_is_dropped(client, rabbitmq_helper):
+def test_invalid_instruction_value_is_dropped(client, rabbitmq_helper):
     crash_id = 'de1bb258-cbbf-4589-a673-34f802160918'
-    #                                        ^ junk
+    #                                        ^ 2 is not a valid instruction
+    #                                          value
     events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
     assert client.run(events) is None
 
