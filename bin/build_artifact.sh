@@ -10,7 +10,7 @@
 
 SHA1="$(git rev-parse HEAD)"
 TAG=""
-PROJECT_REMOTE="$(git remote -v | grep fetch | head -n 1 | awk '{print $2}')"
+PROJECT_REMOTE="https://github.com/$(git remote | head -n 1 | xargs git remote get-url | sed -E 's/[^:]*:(.*)\..*$/\1/')"
 BUILD="${PIGEON_BUILD_ID:=nobuild}"
 
 printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' "$SHA1" "$TAG" "$PROJECT_REMOTE" "$BUILD" > version.json
