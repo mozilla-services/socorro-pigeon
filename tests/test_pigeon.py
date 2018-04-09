@@ -4,7 +4,7 @@
 
 import pytest
 
-from pigeon import CONFIG, extract_crash_id, parse_queues
+from pigeon import CONFIG, extract_crash_id_from_record, parse_queues
 
 
 def test_basic(client, rabbitmq_helper):
@@ -121,31 +121,27 @@ def test_accept(client, rabbitmq_helper, capsys):
     assert '|1|count|socorro.pigeon.accept|' in stdout
 
 
-def test_junk(client, rabbitmq_helper, capsys):
+def test_invalid_instruction_value_is_dropped(client, rabbitmq_helper):
     crash_id = 'de1bb258-cbbf-4589-a673-34f802160918'
-    #                                        ^ junk
+    #                                        ^ 2 is not a valid instruction
+    #                                          value
     events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
     assert client.run(events) is None
 
     item = rabbitmq_helper.next_item()
     assert item is None
 
-    stdout, stderr = capsys.readouterr()
-    assert '|1|count|socorro.pigeon.junk|' in stdout
 
+def test_bad_event_raises_exception(client):
+    crash_id = 'de1bb258-cbbf-4589-a673-34f800160918'
+    events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
 
-def test_junk_in_stage(client, rabbitmq_helper, capsys):
-    with CONFIG.override(env='stage'):
-        crash_id = 'de1bb258-cbbf-4589-a673-34f802160918'
-        #                                        ^ junk
-        events = client.build_crash_save_events(client.crash_id_to_path(crash_id))
-        assert client.run(events) is None
+    # Remove the bucket bits so pigeon kicks up an error
+    del events['Records'][0]['s3']['bucket']
 
-        item = rabbitmq_helper.next_item()
-        assert item == crash_id
-
-        stdout, stderr = capsys.readouterr()
-        assert '|1|count|socorro.pigeon.accept|' in stdout
+    # Make sure .run() raises the error
+    with pytest.raises(KeyError):
+        client.run(events)
 
 
 @pytest.mark.parametrize('data, expected', [
@@ -163,15 +159,12 @@ def test_junk_in_stage(client, rabbitmq_helper, capsys):
     ('v2/raw_crash/de1/20160918/test', None),
     ('foo/bar/test', None),
 
-    # This is a crash from -prod which currently has a 2 in the accept/defer place
-    (
-        'v2/raw_crash/edd/20170404/edd0cf02-9e6f-443a-b098-8274b2170404',
-        'edd0cf02-9e6f-443a-b098-8274b2170404'
-    ),
+    # This is junk
+    ('v2/raw_crash/edd/20170404/edd0cf02-9e6f-443a-b098-8274b2170404', None),
 ])
-def test_extract_crash_id(data, expected, client):
+def test_extract_crash_id_from_record(data, expected, client):
     record = client.build_crash_save_events(data)['Records'][0]
-    assert extract_crash_id(record) == expected
+    assert extract_crash_id_from_record(record) == expected
 
 
 @pytest.mark.parametrize('data, expected', [
