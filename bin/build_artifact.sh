@@ -11,6 +11,6 @@
 SHA1="$(git rev-parse HEAD)"
 TAG=""
 PROJECT_REMOTE="$(git remote -v | grep fetch | head -n 1 | awk '{print $2}')"
-BUILD=""
+BUILD="${PIGEON_BUILD_ID:=nobuild}"
 
-printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' "$SHA1" "$TAG" "$PROJECT_REMOTE" "$BUILD_URL" > version.json
+printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' "$SHA1" "$TAG" "$PROJECT_REMOTE" "$BUILD" > version.json
