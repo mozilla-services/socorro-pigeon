@@ -7,10 +7,15 @@
 # Builds a deploy artifact of what got deployed.
 #
 # Usage: bin/build_artifact.sh
+#
+# Set these vars in the environment:
+#
+#   PIGEON_BUILD_ID: the build id
+#   PIGEON_SOURCE: the source url
 
 SHA1="$(git rev-parse HEAD)"
 TAG=""
-PROJECT_REMOTE="https://github.com/$(git remote | head -n 1 | xargs git remote get-url | sed -E 's/[^:]*:(.*)\..*$/\1/')"
+SOURCE="${PIGEON_SOURCE}"
 BUILD="${PIGEON_BUILD_ID:=nobuild}"
 
-printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' "$SHA1" "$TAG" "$PROJECT_REMOTE" "$BUILD" > version.json
+printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' "$SHA1" "$TAG" "$SOURCE" "$BUILD" > version.json
