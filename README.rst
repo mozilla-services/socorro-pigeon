@@ -23,7 +23,7 @@ Quickstart
    `install docker-compose 1.20.0+ <https://docs.docker.com/compose/install/>`_
    on your machine.
 
-   You'll also need git, make, and bash.
+   You'll also need git, make, Python (2 or 3), and bash.
 
 2. Clone the repo:
 
