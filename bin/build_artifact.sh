@@ -14,7 +14,7 @@
 #   PIGEON_SOURCE: the source url
 
 SHA1="$(git rev-parse HEAD)"
-TAG=""
+TAG="${PIGEON_TAG}"
 SOURCE="${PIGEON_SOURCE}"
 BUILD="${PIGEON_BUILD_ID:=nobuild}"
 
