@@ -1,10 +1,10 @@
 Pigeon
 ======
 
-AWS Lambda function that reacts to S3 object save events looking for new
-raw crashes in the S3 bucket. For each raw crash, it looks at the accept/defer
-annotation and sends the crash id to configured RabbitMQ queues for
-accepted crashes.
+Pigeon is an AWS Lambda function that reacts to S3 ObjectCreated:Put events
+looking for new raw crashes in the S3 bucket. For each raw crash, it looks
+at the accept/defer annotation and sends the crash id to configured RabbitMQ
+queues for accepted crashes.
 
 The accept/defer annotation is the 7th-to-last character of the key::
 
