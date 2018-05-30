@@ -92,17 +92,19 @@ Caveats of this setup
 Scripts
 =======
 
-* ``bin/consume_queue.py``: Used in dev environment to consume and print out
+All scripts are in the ``bin/`` directory.
+
+* ``consume_queue.py``: Used in dev environment to consume and print out
   everything in the RabbitMQ queue.
 
-* ``bin/generate_event.py``: Generates a sample AWS S3 event.
+* ``generate_event.py``: Generates a sample AWS S3 event.
 
-* ``bin/run_invoke.sh``: Invokes the pigeon function in a AWS Lambda Python
+* ``run_invoke.sh``: Invokes the pigeon function in a AWS Lambda Python
   3.6 runtime environment.
 
-* ``bin/integration_test.sh``: Runs an integration test.
+* ``integration_test.sh``: Runs an integration test.
 
-* ``bin/run_circle.sh``: The script that Circle CI runs.
+* ``run_circle.sh``: The script that Circle CI runs.
 
 
 Configuration
