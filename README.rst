@@ -16,6 +16,12 @@ The accept/defer annotation is the 7th-to-last character of the key::
 * any other values are junk and ignored
 
 
+* Free software: Mozilla Public License version 2.0
+* Documentation: this README
+* Bugs: `Report a bug <https://bugzilla.mozilla.org/enter_bug.cgi?format=__standard__&product=Socorro>`_
+* Community Participation Guidelines: `Guidelines <https://github.com/mozilla-services/socorro-pigeon/blob/master/CODE_OF_CONDUCT.md>`_
+
+
 Quickstart
 ==========
 
